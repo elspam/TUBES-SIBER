@@ -3,6 +3,8 @@ from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import text
 import sqlite3
 from functools import wraps
+# untuk menghindari XSS
+import bleach
 
 app = Flask(__name__)
 #Tambahkan app.secret.key untuk mengunci validasi session
@@ -54,11 +56,14 @@ def index():
 @app.route('/add', methods=['POST'])
 @login_required
 def add_student():
-    name = request.form['name']
-    age = request.form['age']
-    grade = request.form['grade']
+    name = request.form.get('name')
+    age = request.form.get('age')
+    grade = request.form.get('grade')
     
-
+    # Sanitasi input untuk menghindari XSS
+    name = bleach.clean(name)
+    grade = bleach.clean(grade)
+    
     connection = sqlite3.connect('instance/students.db')
     cursor = connection.cursor()
 
@@ -95,6 +100,11 @@ def edit_student(id):
         name = request.form['name']
         age = request.form['age']
         grade = request.form['grade']
+
+        # sanitasi input untuk menghindari XSS
+        name = bleach.clean(name)
+        grade = bleach.clean(grade)
+
         
         # RAW Query
         db.session.execute(text(f"UPDATE student SET name='{name}', age={age}, grade='{grade}' WHERE id={id}"))
