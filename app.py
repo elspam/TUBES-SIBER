@@ -61,8 +61,8 @@ def add_student():
     grade = request.form.get('grade')
     
     # Sanitasi input untuk menghindari XSS
-    name = bleach.clean(name)
-    grade = bleach.clean(grade)
+    name = bleach.clean(name, tags=[], strip=True)
+    grade = bleach.clean(grade, tags=[], strip=True)
     
     connection = sqlite3.connect('instance/students.db')
     cursor = connection.cursor()
@@ -73,8 +73,9 @@ def add_student():
     #     {'name': name, 'age': age, 'grade': grade}
     # )
     # db.session.commit()
-    query = f"INSERT INTO student (name, age, grade) VALUES ('{name}', {age}, '{grade}')"
-    cursor.execute(query)
+    #perbaikan menjadi parameterized query
+    query = "INSERT INTO student (name, age, grade) VALUES (?, ?, ?)"
+    cursor.execute(query, (name, age, grade))
     connection.commit()
     connection.close()
     return redirect(url_for('index'))
@@ -84,7 +85,8 @@ def add_student():
 @login_required
 def delete_student(id):
     # RAW Query
-    db.session.execute(text(f"DELETE FROM student WHERE id={id}"))
+    #perbaikan menjadi bind parameterized query
+    db.session.execute(text("DELETE FROM student WHERE id=:id"), {'id': id})
     db.session.commit()
     return redirect(url_for('index'))
 
@@ -102,17 +104,19 @@ def edit_student(id):
         grade = request.form['grade']
 
         # sanitasi input untuk menghindari XSS
-        name = bleach.clean(name)
-        grade = bleach.clean(grade)
+        name = bleach.clean(name, tags=[], strip=True)
+        grade = bleach.clean(grade, tags=[], strip=True)
 
         
         # RAW Query
-        db.session.execute(text(f"UPDATE student SET name='{name}', age={age}, grade='{grade}' WHERE id={id}"))
+        #perbaikan menjadi bind parameterized query
+        db.session.execute(text("UPDATE student SET name=:name, age=:age, grade=:grade WHERE id=:id"), {'name': name, 'age': age, 'grade': grade, 'id': id})
         db.session.commit()
         return redirect(url_for('index'))
     else:
         # RAW Query
-        student = db.session.execute(text(f"SELECT * FROM student WHERE id={id}")).fetchone()
+        #perbaikan menjadi bind parameterized query
+        student = db.session.execute(text("SELECT * FROM student WHERE id=:id"), {'id': id}).fetchone()
         return render_template('edit.html', student=student)
 
 
