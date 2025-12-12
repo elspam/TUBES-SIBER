@@ -9,6 +9,7 @@ import bleach
 app = Flask(__name__)
 #Tambahkan app.secret.key untuk mengunci validasi session
 app.secret_key = 'Minummulto_na_ko_ng_damdamin_ko'
+
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///students.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
@@ -34,17 +35,25 @@ def login_required(f):
 #Fungsi login
 @app.route('/login', methods=['GET','POST'])
 def login():
-	if request.method == 'POST':
-		username = request.form.get('username')
-		password = request.form.get('password')
-		if username == "Rapid1945" and password == 'Ev3Rnight512*':
-			session['logged_in'] = True
-			session['username'] = username
-			flash('Login berhasil')
-			return redirect(url_for('index'))
-		else:
-			flash('username atau password salah')
-	return render_template('login.html')
+    if request.method == 'POST':
+        username = request.form.get('username', '').strip()
+        password = request.form.get('password', '').strip()
+        
+        #query username dan password dari tabel admin
+        conn = sqlite3.connect('instance/students.db')
+        cursor = conn.cursor()
+        cursor.execute("SELECT id FROM admin WHERE username=? AND password=?", (username, password))
+        admin = cursor.fetchone()
+        cursor.close()
+        conn.close()
+
+        if admin:
+            session['logged_in'] = True
+            flash('Login berhasil')
+            return redirect(url_for('index'))
+        else:
+            flash('Invalid username or password', 'error')
+    return render_template('login.html')
 
 @app.route('/')
 @login_required
@@ -85,6 +94,7 @@ def add_student():
 @login_required
 def delete_student(id):
     # RAW Query
+    # db.session.execute(text(f"DELETE FROM student WHERE id={id}")) (DIHAPUS)
     #perbaikan menjadi bind parameterized query
     db.session.execute(text("DELETE FROM student WHERE id=:id"), {'id': id})
     db.session.commit()
@@ -109,12 +119,16 @@ def edit_student(id):
 
         
         # RAW Query
+        # db.session.execute(text(f"UPDATE student SET name='{name}', age={age}, grade='{grade}' WHERE id={id}")) (DIHAPUS)
+
         #perbaikan menjadi bind parameterized query
         db.session.execute(text("UPDATE student SET name=:name, age=:age, grade=:grade WHERE id=:id"), {'name': name, 'age': age, 'grade': grade, 'id': id})
         db.session.commit()
         return redirect(url_for('index'))
     else:
         # RAW Query
+        # student = db.session.execute(text(f"SELECT * FROM student WHERE id={id}")).fetchone() (DIHAPUS)
+        
         #perbaikan menjadi bind parameterized query
         student = db.session.execute(text("SELECT * FROM student WHERE id=:id"), {'id': id}).fetchone()
         return render_template('edit.html', student=student)
