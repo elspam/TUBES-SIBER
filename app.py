@@ -6,6 +6,9 @@ from functools import wraps
 # untuk menghindari XSS
 import bleach
 
+# untuk manajemen keamanan password (hashing)
+from werkzeug.security import generate_password_hash, check_password_hash
+
 app = Flask(__name__)
 #Tambahkan app.secret.key untuk mengunci validasi session
 app.secret_key = 'Minummulto_na_ko_ng_damdamin_ko'
@@ -32,22 +35,23 @@ def login_required(f):
 		return f(*args, **kwargs)
 	return decorated_function
 		
-#Fungsi login
+# Modifikasi Fungsi login
 @app.route('/login', methods=['GET','POST'])
 def login():
     if request.method == 'POST':
         username = request.form.get('username', '').strip()
         password = request.form.get('password', '').strip()
-        
-        #query username dan password dari tabel admin
+
         conn = sqlite3.connect('instance/students.db')
         cursor = conn.cursor()
-        cursor.execute("SELECT id FROM admin WHERE username=? AND password=?", (username, password))
-        admin = cursor.fetchone()
+        # PERBAIKAN: Ambil hash password berdasarkan username saja
+        cursor.execute("SELECT password FROM admin WHERE username=?", (username,))
+        user_data = cursor.fetchone()
         cursor.close()
         conn.close()
 
-        if admin:
+        # PERBAIKAN: Verifikasi password menggunakan check_password_hash
+        if user_data and check_password_hash(user_data[0], password):
             session['logged_in'] = True
             flash('Login berhasil')
             return redirect(url_for('index'))
@@ -143,3 +147,9 @@ if __name__ == '__main__':
         db.create_all()
     app.run(host='0.0.0.0', port=5000, debug=True)
 
+#query username dan password dari tabel admin
+conn = sqlite3.connect('instance/students.db')
+cursor = conn.cursor()
+# Kerentanan: Membandingkan password plaintext langsung di database
+cursor.execute("SELECT id FROM admin WHERE username=? AND password=?", (username, password))
+admin = cursor.fetchone()
