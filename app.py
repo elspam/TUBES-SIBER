@@ -82,6 +82,7 @@ def add_student():
     #     {'name': name, 'age': age, 'grade': grade}
     # )
     # db.session.commit()
+	# query = f"INSERT INTO student (name, age, grade) VALUES ('{name}', {age}, '{grade}')" dihapus
     #perbaikan menjadi parameterized query
     query = "INSERT INTO student (name, age, grade) VALUES (?, ?, ?)"
     cursor.execute(query, (name, age, grade))
@@ -142,4 +143,5 @@ if __name__ == '__main__':
     with app.app_context():
         db.create_all()
     app.run(host='0.0.0.0', port=5000, debug=True)
+
 
